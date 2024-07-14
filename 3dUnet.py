@@ -135,9 +135,6 @@ class Unet(torch.nn.Module):
         return x
 
 
-def train():
-    pass
-
 if __name__ == "__main__":
     train_dataset = SegDataset("./data/train/images", "./data/train/masks")
     train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=4)

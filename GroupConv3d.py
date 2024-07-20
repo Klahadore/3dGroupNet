@@ -2,49 +2,16 @@ import torch
 from torch.nn import functional as F
 from torch import nn
 
-""" 
-This will consider the following orientations
-
-0,0
-0,90
-0,180
-0,270
-
-90,0
-90,90
-90,180
-90,270
-
-180,0
-180,90
-180,180
-180,270
-
-270,0
-270,90
-270,180
-270,270
-
-This will add a channel for each orientation considered.
-
-Dimensions should be
-(batches,channels, orientation channels , x , y , z)
-"""
-
 
 # Groups specifies is this is a first layer of a network which operates on images
 # Or a later layer of a network which operates on the group orientations
-def _rot_back_90(t):
-    return torch.rot90(t, k=1, dims=(4,2))
-
-def _rot_right_90(t):
-    return torch.rot90(t, k=1, dims=(3,2))
 
 
 class GroupConv3d(torch.nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=(3,3,3), stride=1, groups=True):
         super(GroupConv3d, self).__init__()
         
+        self.out_channels = out_channels
         self.stride = stride  
         self.kernel = nn.Parameter(
             torch.empty(out_channels, in_channels, *kernel_size)
@@ -53,6 +20,12 @@ class GroupConv3d(torch.nn.Module):
         
         self.groups = groups
    
+    def _rot_back_90(self, t):
+        t.rot90(k=1, dims=(4,2))
+
+    def _rot_right_90(self, t):
+        t.rot90(k=1, dims=(3,2))
+        
     def _conv_forward(self, x):
         return x
     
@@ -69,17 +42,23 @@ class GroupConv3d(torch.nn.Module):
         
         rotation = 1
         print(x.shape)
+
+        new_x = torch.empty(x.shape[0], x.shape[1], self.out_channels, x.shape[3], x.shape[4], x.shape[5])
         for i in range(x.shape[2]):
             channel = x[:, i, :, :, :, :]
             print(channel.shape)
             # TODO: padding = 1 is only true if kernel size is 3x3x3
             channel = F.conv3d(channel, self.kernel, stride=self.stride, padding=1)
             print(channel.shape)
-            x[:,i,:,:,:,:] = channel
+            new_x[:,i,:,:,:,:] = channel
             print(x.shape)
-            self.kernel = _rot_right_90(self.kernel)
+
+            self._rot_right_90(self.kernel)
             if rotation % 4 == 0:
-                self.kernel = _rot_back_90(self.kernel)
+                self._rot_back_90(self.kernel)
+            print("made it through once")
+        
+        return new_x
                 
             
 if __name__ == '__main__':

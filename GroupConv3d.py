@@ -7,18 +7,30 @@ from torch import nn
 # Or a later layer of a network which operates on the group orientations
 
 
+"""
+    Specify order:
+    'first' means that the layer operates on images which contain no orientation channels
+    'middle' indicates that the layer operates on group orientations, which contain orientation channels
+    'last' indicates that the layer will add up all the separate orientation channels, and then output no orientation channels. 
+"""
+
+# IMPORTANT: the only kernel size supported is (3,3,3), and the only stride is one, and the only padding is "same".
 class GroupConv3d(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=(3,3,3), stride=1, groups=True):
+    def __init__(self, in_channels, out_channels, order='middle'):
         super(GroupConv3d, self).__init__()
+
+        if order not in {"first", "middle", "end"}:
+            raise ValueError("Order needs to be 'first', 'middle', 'end'.")
         
+        kernel_size=(3,3,3)
+
         self.out_channels = out_channels
-        self.stride = stride  
         self.kernel = nn.Parameter(
             torch.empty(out_channels, in_channels, *kernel_size)
         )
         nn.init.xavier_uniform_(self.kernel)
         
-        self.groups = groups
+        self.order = order
    
     def _rot_back_90(self, t):
         t.rot90(k=1, dims=(4,2))
@@ -26,29 +38,35 @@ class GroupConv3d(torch.nn.Module):
     def _rot_right_90(self, t):
         t.rot90(k=1, dims=(3,2))
         
-    def _conv_forward(self, x):
-        return x
     
     def forward(self, x):
-        if self.groups:
-            assert len(x.shape) == 6
-        else:
-            assert len(x.shape) == 5
+        if self.order == 'first':
+            if len(x.shape) != 5:
+                raise ValueError(f"Tensor shape is not correct. Expected shape for 'first' is 5 dims, but got {len(x.shape)}")    
+            new_shape = list(x.shape)
+            new_shape.insert(1, 16)
 
-        
-        # Adds dimension at dim=2
-        if not self.groups:
-            x.unsqueeze_(2)
-        
-        rotation = 1
-        print(x.shape)
+            # Add a dimension at position 1
+            x = x.unsqueeze(1)
 
+            # Expand to the new shape
+            x = x.expand(*new_shape)
+            print("xshape", x.shape)
+
+        elif self.order == 'middle':
+            if len(x.shape) != 6:
+                raise ValueError(f"Tensor shape is not correct. Expected shape for 'middle' is 5 dims, but got {len(x.shape)}")
+        elif self.order == 'end':
+            if len(x.shape) != 6:
+                raise ValueError(f"Tensor shape is not correct. Expected shape for 'end' is 5 dims, but got {len(x.shape)}")
+                      
         new_x = torch.empty(x.shape[0], x.shape[1], self.out_channels, x.shape[3], x.shape[4], x.shape[5])
-        for i in range(x.shape[2]):
+
+        rotation = 1
+        for i in range(16):
             channel = x[:, i, :, :, :, :]
             print(channel.shape)
-            # TODO: padding = 1 is only true if kernel size is 3x3x3
-            channel = F.conv3d(channel, self.kernel, stride=self.stride, padding=1)
+            channel = F.conv3d(channel, self.kernel, stride=1, padding=1)
             print(channel.shape)
             new_x[:,i,:,:,:,:] = channel
             print(x.shape)
@@ -58,17 +76,27 @@ class GroupConv3d(torch.nn.Module):
                 self._rot_back_90(self.kernel)
             print("made it through once")
         
-        return new_x
-                
+        x = new_x
+        if self.order == 'end':
+            return x.sum(dim=1)
+        
+        return x
+        
             
 if __name__ == '__main__':
-    layer = GroupConv3d(5,2)
+    # Testing code
+    layer = GroupConv3d(5,2, order='end')
     
-    data = torch.randn(1,16,5,128,128,128)
+    data = torch.randn(2,16,5,128,128,128)
     
     data = layer(data)
     print(data.shape)
-            
+    
+    layer1 = GroupConv3d(3,1,order="first")
+    data = torch.randn(2,3,128,128,128)
+    print("got here")
+    data = layer1(data)
+    print(data.shape)
             
         
         

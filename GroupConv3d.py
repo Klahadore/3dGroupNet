@@ -31,10 +31,12 @@ class GroupConv3d(torch.nn.Module):
         nn.init.xavier_uniform_(self.kernel)
         
         self.order = order
-   
+    
+    # rotates kernal backwards in place
     def _rot_back_90(self, t):
         t.rot90(k=1, dims=(4,2))
 
+    # rotates kernel towards the right in place
     def _rot_right_90(self, t):
         t.rot90(k=1, dims=(3,2))
         
@@ -51,7 +53,7 @@ class GroupConv3d(torch.nn.Module):
 
             # Expand to the new shape
             x = x.expand(*new_shape)
-            print("xshape", x.shape)
+            # print("xshape", x.shape)
 
         elif self.order == 'middle':
             if len(x.shape) != 6:
@@ -65,11 +67,11 @@ class GroupConv3d(torch.nn.Module):
         rotation = 1
         for i in range(16):
             channel = x[:, i, :, :, :, :]
-            print(channel.shape)
+            # print(channel.shape)
             channel = F.conv3d(channel, self.kernel, stride=1, padding=1)
-            print(channel.shape)
+            # print(channel.shape)
             new_x[:,i,:,:,:,:] = channel
-            print(x.shape)
+            # print(x.shape)
 
             self._rot_right_90(self.kernel)
             if rotation % 4 == 0:

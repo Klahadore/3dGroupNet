@@ -46,6 +46,8 @@ class GroupConv3d(torch.nn.Module):
             if len(x.shape) != 5:
                 raise ValueError(f"Tensor shape is not correct. Expected shape for 'first' is 5 dims, but got {len(x.shape)}")    
             new_shape = list(x.shape)
+            
+            
             new_shape.insert(1, 16)
 
             # Add a dimension at position 1
@@ -64,7 +66,7 @@ class GroupConv3d(torch.nn.Module):
                       
         new_x = torch.empty(x.shape[0], x.shape[1], self.out_channels, x.shape[3], x.shape[4], x.shape[5])
 
-        rotation = 1
+        rotation = 0
         for i in range(16):
             channel = x[:, i, :, :, :, :]
             # print(channel.shape)

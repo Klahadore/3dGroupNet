@@ -36,7 +36,7 @@ class Down(torch.nn.Module):
         x = self.dropout(x)
         x = self.C2(x)
         x = F.relu(x)
-        skip_con = x
+        skip_con = x.clone()
         x = self.pool(x)
 
         return x, skip_con
@@ -54,7 +54,7 @@ class Up(torch.nn.Module):
     def forward(self, x, skip_conn):
         x = self.upscale(x)
         #print("upscale", x.shape)
-        x = x = torch.cat([skip_conn, x], dim=1)
+        x = torch.cat([skip_conn, x], dim=1)
        # print('cat', x.shape)
         x = self.C1(x)
         # print(x.shape)
@@ -158,28 +158,33 @@ if __name__ == "__main__":
         for images, masks in train_loader:
             images = images.to(device)
             masks = masks.to(device)
-          #  print("masks", masks.shape)
-        #    print(images.shape)
+
 
             outputs = model(images)
-         #   print(outputs.shape)
             loss = criterion(outputs, masks)
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            all_preds.append(outputs.detach().cpu().numpy())
-            all_masks.append(masks.detach().cpu().numpy())
+
 
             print(loss.item())
-
-            all_preds = np.concatenate(all_preds, axis = 0)
-            all_masks = np.concatenate(all_masks, axis = 0)
-
-            auc = calculate_auc(all_masks, all_preds)
-            f1 = calculate_f1(all_masks, all_preds)
             
-            print(f"Epoch {epoch} - Loss: {loss.item()}, AUC: {auc}, F1: {f1}")
-            print("completed epoch:", epoch)
+            if (epoch + 1) % 5 == 0:
+                model.cpu()
+                model_save_path = f'3d_UNet_Normal_{epoch+1}.pth'
+                torch.save(model.state_dict(), model_save_path)
+                print(f'Model saved to {model_save_path}')
+                model.to(device)
+            # all_preds.append(outputs.detach().cpu().numpy())
+            # all_masks.append(masks.detach().cpu().numpy())
+            # all_preds = np.concatenate(all_preds, axis = 0)
+            # all_masks = np.concatenate(all_masks, axis = 0)
+
+            # auc = calculate_auc(all_masks, all_preds)
+            # f1 = calculate_f1(all_masks, all_preds)
+            
+            # print(f"Epoch {epoch} - Loss: {loss.item()}, AUC: {auc}, F1: {f1}")
+            # print("completed epoch:", epoch)
 

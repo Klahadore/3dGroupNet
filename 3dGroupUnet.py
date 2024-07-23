@@ -136,7 +136,7 @@ if __name__ == "__main__":
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    model.to(device)
+    model.cuda()
     for epoch in range(num_epochs):
         model.train()
 

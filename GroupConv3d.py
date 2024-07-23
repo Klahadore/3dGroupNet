@@ -15,7 +15,7 @@ from torch import nn
 """
 
 # IMPORTANT: the only kernel size supported is (3,3,3), and the only stride is one, and the only padding is "same".
-class GroupConv3d(torch.nn.Module):
+class GroupConv3d(nn.Module):
     def __init__(self, in_channels, out_channels, order='middle'):
         super(GroupConv3d, self).__init__()
 
@@ -28,7 +28,7 @@ class GroupConv3d(torch.nn.Module):
         self.kernel = nn.Parameter(
             torch.zeros(out_channels, in_channels, *kernel_size)
         )
-        self.init_parameters()
+        # self.init_parameters()
 
         print(self.kernel.device)
         self.order = order

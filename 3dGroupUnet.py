@@ -142,8 +142,8 @@ if __name__ == "__main__":
 
         for images, masks, in train_loader:
 
-            images.to(device)
-            masks.to(device)
+            images = images.to(device)
+            masks = masks.to(device)
 
             outputs = model(images)
             loss = criterion(outputs, masks)

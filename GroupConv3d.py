@@ -37,6 +37,12 @@ class GroupConv3d(torch.nn.Module):
 
     def _rot_right_90(self, t):
         t.rot90(k=1, dims=(3,2))
+
+    
+    def to(self, *args, **kwargs):
+        self = super(GroupConv3d, self).to(*args, **kwargs)
+        self.kernel.data = self.kernel.data.to(*args, **kwargs)
+        return self
         
     
     def forward(self, x):

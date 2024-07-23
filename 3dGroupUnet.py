@@ -139,11 +139,11 @@ if __name__ == "__main__":
     model.cuda()
     for epoch in range(num_epochs):
         model.train()
-
+        print(next(model.parameters()).is_cuda)
         for images, masks, in train_loader:
 
-            images = images.to(device)
-            masks = masks.to(device)
+            images = images.cuda()
+            masks = masks.cuda()
 
             outputs = model(images)
             loss = criterion(outputs, masks)

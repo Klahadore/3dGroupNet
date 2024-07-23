@@ -53,7 +53,6 @@ class GroupConv3d(torch.nn.Module):
 
             # Expand to the new shape
             x = x.expand(*new_shape)
-            print("xshape", x.shape)
 
         elif self.order == 'middle':
             if len(x.shape) != 6:
@@ -67,16 +66,12 @@ class GroupConv3d(torch.nn.Module):
         rotation = 0
         for i in range(16):
             channel = x[:, i, :, :, :, :]
-            print(channel.shape)
             channel = F.conv3d(channel, self.kernel, stride=1, padding=1)
-            print(channel.shape)
             new_x[:,i,:,:,:,:] = channel
-            print(x.shape)
 
             self._rot_right_90(self.kernel)
             if rotation % 4 == 0:
                 self._rot_back_90(self.kernel)
-            print("made it through once")
         
         x = new_x
         if self.order == 'end':
@@ -96,7 +91,6 @@ if __name__ == '__main__':
     
     layer1 = GroupConv3d(3,1,order="first")
     data = torch.randn(2,3,128,128,128)
-    print("got here")
     data = layer1(data)
     print(data.shape)
             

@@ -26,10 +26,10 @@ class GroupConv3d(torch.nn.Module):
 
         self.out_channels = out_channels
         self.kernel = nn.Parameter(
-            torch.empty(out_channels, in_channels, *kernel_size)
+            torch.zeros(out_channels, in_channels, *kernel_size)
         )
         self.init_parameters()
-        
+
         print(self.kernel.device)
         self.order = order
 

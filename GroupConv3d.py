@@ -29,7 +29,7 @@ class GroupConv3d(torch.nn.Module):
             torch.empty(out_channels, in_channels, *kernel_size)
         )
         nn.init.xavier_uniform_(self.kernel)
-        
+        print("ss", self.kernel.device)
         self.order = order
    
     def _rot_back_90(self, t):

@@ -19,6 +19,8 @@ class Down(nn.Module):
             self.C1 = GroupConv3d(in_channels, out_channels, order='first')
         else:
             self.C1 = GroupConv3d(in_channels, out_channels, order='middle')
+        
+        self.relu = nn.ReLU(inplace=True) 
 
         self.dropout = Dropout(p=0.1)
         self.C2 = GroupConv3d(out_channels, out_channels)
@@ -26,10 +28,11 @@ class Down(nn.Module):
     
     def forward(self, x):
         x = self.C1(x)
-        x = F.relu(x)
+        print(x.dtype)
+        x = self.relu(x)
         x = self.dropout(x)
         x = self.C2(x)
-        x = F.relu(x)
+        x = self.relu(x)
         skip_con = x.clone()
         x = self.pool(x)
         return x, skip_con
@@ -41,7 +44,8 @@ class Up(nn.Module):
         self.upscale = GroupConvTranspose3d(in_channels, out_channels)
         self.C1 = GroupConv3d(in_channels, out_channels)
         self.dropout = Dropout(p=0.1)
-
+        
+        self.relu = nn.ReLU(inplace=True) 
         if order == "end":
             self.C2 = GroupConv3d(out_channels, out_channels, order='end')
 
@@ -51,10 +55,10 @@ class Up(nn.Module):
         x = torch.cat([skip_con, x], dim=2)
 
         x = self.C1(x)
-        x = F.relu(x)
+        x = self.relu(x)
         x = self.dropout(x)
         x = self.C2(x)
-        x = F.relu(x)
+        x = self.relu(x)
 
         return x
 
@@ -66,13 +70,13 @@ class Bottleneck(nn.Module):
         self.C1 = GroupConv3d(in_channels, out_channels)
         self.dropout = Dropout(p=0.1)
         self.C2 = GroupConv3d(out_channels, out_channels)
-
+        self.relu = nn.ReLU(inplace=True) 
     def forward(self, x):
         x = self.C1(x)
-        x = F.relu(x)
+        x = self.relu(x)
         x = self.dropout(x)
         x = self.C2(x)
-        x = F.relu(x)
+        x = self.relu(x)
         return x
     
 

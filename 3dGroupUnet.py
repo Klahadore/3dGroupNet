@@ -98,7 +98,7 @@ class UnetGroup3d(nn.Module):
     def forward(self,x):
 
         x, s1 = self.down1(x)
-        print("1", x.device())
+        
         x, s2 = self.down2(x)
      #   print(x.shape)
         x, s3 = self.down3(x)

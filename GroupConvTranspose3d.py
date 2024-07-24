@@ -34,7 +34,7 @@ class GroupConvTranspose3d(nn.Module):
         elif self.order == "middle":
             pass
        
-        new_x = torch.empty(x.shape[0], x.shape[1], self.out_channels, 2 * x.shape[3], 2 * x.shape[4], 2 * x.shape[5])
+        new_x = torch.empty(x.shape[0], x.shape[1], self.out_channels, 2 * x.shape[3], 2 * x.shape[4], 2 * x.shape[5], device='cuda:0')
 
         rotation = 0
         for i in range(16):

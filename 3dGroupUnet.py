@@ -95,13 +95,23 @@ class UnetGroup3d(nn.Module):
 
     def forward(self, x):
         x, s1 = self.down1(x)
+        s1.cpu()
+        print("1")
         x, s2 = self.down2(x)
+        s2.cpu()
+        print("2")
         x, s3 = self.down3(x)
-        
+        print("3")
+        s3.cpu()        
         x = self.bottleneck(x)
         
+        s3.cuda()
         x = self.up1(x, s3)
+
+        s2.cuda()
         x = self.up2(x, s2)
+
+        s1.cuda()
         x = self.up3(x, s1)
 
         x = self.out(x)

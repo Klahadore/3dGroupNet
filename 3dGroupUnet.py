@@ -4,6 +4,7 @@ from torch import optim
 from torch import nn
 from torch.nn import Dropout, Conv3d
 from torch.utils.data import DataLoader
+from torch.amp import autocast, GradScaler
 
 from dataset import *
 from GroupConv3d import GroupConv3d
@@ -125,7 +126,7 @@ if __name__ == "__main__":
 
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
-    scaler = torch.amp.GradScaler()
+    scaler = GradScaler('cuda')
 
     num_epochs = 15
 
@@ -142,7 +143,7 @@ if __name__ == "__main__":
             images = images.cuda()
             masks = masks.cuda()
 
-            with torch.amp.autocast():
+            with autocast('cuda'):
                 outputs = model(images)
                 loss = criterion(outputs, masks)
 

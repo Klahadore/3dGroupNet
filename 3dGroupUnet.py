@@ -95,23 +95,23 @@ class UnetGroup3d(nn.Module):
 
     def forward(self, x):
         x, s1 = self.down1(x)
-        s1.cpu()
+        s1 = s1.cpu()
         print("1")
         x, s2 = self.down2(x)
-        s2.cpu()
+        s2 = s2.cpu()
         print("2")
         x, s3 = self.down3(x)
         print("3")
-        s3.cpu()        
+        s3 = s3.cpu()        
         x = self.bottleneck(x)
         
-        s3.cuda()
+        s3 = s3.cuda()
         x = self.up1(x, s3)
 
-        s2.cuda()
+        s2 = s2.cuda()
         x = self.up2(x, s2)
 
-        s1.cuda()
+        s1 = s1.cuda()
         x = self.up3(x, s1)
 
         x = self.out(x)
@@ -125,6 +125,7 @@ if __name__ == "__main__":
 
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
+    scaler = torch.amp.GradScaler()
 
     num_epochs = 15
 
@@ -137,18 +138,20 @@ if __name__ == "__main__":
     for epoch in range(num_epochs):
         model.train()
         for images, masks, in train_loader:
-
+            optimizer.zero_grad()
             images = images.cuda()
             masks = masks.cuda()
 
-            outputs = model(images)
-            loss = criterion(outputs, masks)
+            with torch.amp.autocast():
+                outputs = model(images)
+                loss = criterion(outputs, masks)
 
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            print(loss.item)
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+            
+            print(loss.item())
+        
         if (epoch + 1) % 5 == 0:
                 model.cpu()
                 model_save_path = f'3d_Group_UNet_Normal_{epoch+1}.pth'

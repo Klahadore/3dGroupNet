@@ -145,7 +145,7 @@ if __name__ == "__main__":
         for images, masks, in train_loader:
             optimizer.zero_grad()
             images = images.cuda()
-            masks = masks.cuda()
+            # masks = masks.cuda()
 
             with autocast('cuda'):
                 outputs = model(images)

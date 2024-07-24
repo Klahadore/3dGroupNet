@@ -78,49 +78,33 @@ class Bottleneck(nn.Module):
 
 
 class UnetGroup3d(nn.Module):
-    def __init__(self, ):
-        super().__init__()
+    def __init__(self):
+        super(UnetGroup3d, self).__init__()
 
         self.down1 = Down(3, 16, order="first")
         self.down2 = Down(16, 32)
         self.down3 = Down(32, 64)
-        self.down4 = Down(64, 128)
 
-        self.bottleneck = Bottleneck(128, 256)
+        self.bottleneck = Bottleneck(64, 128)
 
-        self.up1 = Up(256, 128)
-        self.up2 = Up(128, 64)
-        self.up3 = Up(64, 32)
-        self.up4 = Up(32, 16)
+        self.up1 = Up(128, 64)
+        self.up2 = Up(64, 32)
+        self.up3 = Up(32, 16)
 
-        self.out = Conv3d(16, 4, kernel_size=(1,1,1))
+        self.out = nn.Conv3d(16, 4, kernel_size=(1, 1, 1))
 
-    def forward(self,x):
-
+    def forward(self, x):
         x, s1 = self.down1(x)
-        
         x, s2 = self.down2(x)
-     #   print(x.shape)
         x, s3 = self.down3(x)
-    #    print(x.shape)
-        x, s4 = self.down4(x)
-     #   print(x.shape)
         
         x = self.bottleneck(x)
-    #    print(x.shape)
         
-        x = self.up1(x, s4)
-     #   print(x.shape)
-        x = self.up2(x, s3)
-     #   print(x.shape)
-        x = self.up3(x, s2)
-     #   print(x.shape)
-        x = self.up4(x, s1)
-      #  print("g", x.shape)
+        x = self.up1(x, s3)
+        x = self.up2(x, s2)
+        x = self.up3(x, s1)
 
         x = self.out(x)
-       # print('h', x.shape)
-     #   print(x.shape)
 
         return x
     

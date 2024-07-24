@@ -17,7 +17,7 @@ from torch import nn
 # IMPORTANT: the only kernel size supported is (3,3,3), and the only stride is one, and the only padding is "same".
 class GroupConv3d(nn.Module):
     def __init__(self, in_channels, out_channels, order='middle'):
-        super(GroupConv3d, self).__init__()
+        super().__init__()
 
         if order not in {"first", "middle", "end"}:
             raise ValueError("Order needs to be 'first', 'middle', 'end'.")
@@ -28,6 +28,7 @@ class GroupConv3d(nn.Module):
         self.kernel = nn.Parameter(
             torch.zeros(out_channels, in_channels, *kernel_size)
         )
+        print(self.kernel.device, "device")
         # self.init_parameters()
 
         print(self.kernel.device)
@@ -47,6 +48,7 @@ class GroupConv3d(nn.Module):
         
     
     def forward(self, x):
+        print("ch", self.kernel.device)
         if self.order == 'first':
             if len(x.shape) != 5:
                 raise ValueError(f"Tensor shape is not correct. Expected shape for 'first' is 5 dims, but got {len(x.shape)}")    
@@ -68,11 +70,13 @@ class GroupConv3d(nn.Module):
             if len(x.shape) != 6:
                 raise ValueError(f"Tensor shape is not correct. Expected shape for 'end' is 5 dims, but got {len(x.shape)}")
                       
-        new_x = torch.empty(x.shape[0], x.shape[1], self.out_channels, x.shape[3], x.shape[4], x.shape[5])
-
+        new_x = torch.empty(x.shape[0], x.shape[1], self.out_channels, x.shape[3], x.shape[4], x.shape[5], device="cuda:0")
+        print(new_x.device, "new_x device")
         rotation = 0
         for i in range(16):
             channel = x[:, i, :, :, :, :]
+            print(i)
+            print("channel device",channel.device)
             channel = F.conv3d(channel, self.kernel, stride=1, padding=1)
             new_x[:,i,:,:,:,:] = channel
 

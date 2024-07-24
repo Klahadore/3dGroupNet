@@ -12,7 +12,7 @@ from compatible_max_pool import MaxPool3DWrapper
 
 class Down(nn.Module):
     def __init__(self, in_channels, out_channels, order='middle'):
-        super(Down, self).__init__()
+        super().__init__()
         self.order = order
         if self.order == 'first':
             self.C1 = GroupConv3d(in_channels, out_channels, order='first')
@@ -35,7 +35,7 @@ class Down(nn.Module):
     
 class Up(nn.Module):
     def __init__(self, in_channels, out_channels, order="middle"):
-        super(Up, self).__init__()
+        super().__init__()
 
         self.upscale = GroupConvTranspose3d(in_channels, out_channels)
         self.C1 = GroupConv3d(in_channels, out_channels)
@@ -60,7 +60,7 @@ class Up(nn.Module):
 
 class Bottleneck(nn.Module):
     def __init__(self, in_channels, out_channels):
-        super(Bottleneck, self).__init__()
+        super().__init__()
 
         self.C1 = GroupConv3d(in_channels, out_channels)
         self.dropout = Dropout(p=0.1)
@@ -79,7 +79,7 @@ class Bottleneck(nn.Module):
 
 class UnetGroup3d(nn.Module):
     def __init__(self, ):
-        super(UnetGroup3d, self).__init__()
+        super().__init__()
 
         self.down1 = Down(3, 16, order="first")
         self.down2 = Down(16, 32)
@@ -98,7 +98,7 @@ class UnetGroup3d(nn.Module):
     def forward(self,x):
 
         x, s1 = self.down1(x)
-     #   print("1", x.shape)
+        print("1", x.device())
         x, s2 = self.down2(x)
      #   print(x.shape)
         x, s3 = self.down3(x)
@@ -132,14 +132,16 @@ if __name__ == "__main__":
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-    num_epochs = 10
+    num_epochs = 15
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    model.cuda()
+    model.to(device)
+    # for name, param in model.named_parameters():
+    #     print(name, param.data)
+
     for epoch in range(num_epochs):
         model.train()
-        print(next(model.parameters()).is_cuda)
         for images, masks, in train_loader:
 
             images = images.cuda()
@@ -153,3 +155,9 @@ if __name__ == "__main__":
             optimizer.step()
 
             print(loss.item)
+        if (epoch + 1) % 5 == 0:
+                model.cpu()
+                model_save_path = f'3d_Group_UNet_Normal_{epoch+1}.pth'
+                torch.save(model.state_dict(), model_save_path)
+                print(f'Model saved to {model_save_path}')
+                model.to(device)

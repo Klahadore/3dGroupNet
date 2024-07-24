@@ -88,40 +88,37 @@ class UnetGroup3d(nn.Module):
 
         self.down1 = Down(3, 16, order="first")
         self.down2 = Down(16, 32)
-        self.down3 = Down(32, 64)
 
-        self.bottleneck = Bottleneck(64, 128)
+        self.bottleneck = Bottleneck(32, 64)
 
-        self.up1 = Up(128, 64)
-        self.up2 = Up(64, 32)
-        self.up3 = Up(32, 16)
+        self.up1 = Up(64, 32)
+        self.up2 = Up(32, 16)
 
         self.out = nn.Conv3d(16, 4, kernel_size=(1, 1, 1))
 
     def forward(self, x):
+        print(f'Input dtype: {x.dtype}')
         x, s1 = self.down1(x)
+        print(f'After down1 - x: {x.dtype}, s1: {s1.dtype}')
         s1 = s1.cpu()
-        print("1")
-        x, s2 = self.down2(x)
-        s2 = s2.cpu()
-        print("2")
-        x, s3 = self.down3(x)
-        print("3")
-        s3 = s3.cpu()        
-        x = self.bottleneck(x)
         
-        s3 = s3.cuda()
-        x = self.up1(x, s3)
-
+        x, s2 = self.down2(x)
+        print(f'After down2 - x: {x.dtype}, s2: {s2.dtype}')
+        s2 = s2.cpu()
+        
+        x = self.bottleneck(x)
+        print(f'After bottleneck - x: {x.dtype}')
+        
         s2 = s2.cuda()
-        x = self.up2(x, s2)
-
+        x = self.up1(x, s2)
+        print(f'After up1 - x: {x.dtype}')
+        
         s1 = s1.cuda()
-        x = self.up3(x, s1)
-
+        x = self.up2(x, s1)
+        print(f'After up2 - x: {x.dtype}')
+        
         x = self.out(x)
-
-        return x
+        print(f'Output dtype: {x.dtype}')
     
 if __name__ == "__main__":
     train_dataset = SegDataset("./data/train/images", "./data/train/masks")

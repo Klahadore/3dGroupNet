@@ -1,108 +1,94 @@
 import torch
-from torch.nn import functional as F
 from torch import nn
+from torch.nn import functional as F
+from einops.layers.torch import Rearrange, Reduce
+
+def create_rotated_kernels(kernel):
+    rotations = []
+
+    for rot_x in range(4):
+        for rot_y in range(4):
+            rotated_kernel = torch.rot90(kernel, rot_x, [3,4])
+            rotated_kernel = torch.rot90(rotated_kernel, rot_y, [2,4])
+            rotations.append(rotated_kernel)
+    
+    return torch.stack(rotations, dim=2)
 
 
-# Groups specifies is this is a first layer of a network which operates on images
-# Or a later layer of a network which operates on the group orientations
-
-
-"""
-    Specify order:
-    'first' means that the layer operates on images which contain no orientation channels
-    'middle' indicates that the layer operates on group orientations, which contain orientation channels
-    'last' indicates that the layer will add up all the separate orientation channels, and then output no orientation channels. 
-"""
-
-# IMPORTANT: the only kernel size supported is (3,3,3), and the only stride is one, and the only padding is "same".
 class GroupConv3d(nn.Module):
-    def __init__(self, in_channels, out_channels, order='middle'):
-        super().__init__()
-
-        if order not in {"first", "middle", "end"}:
-            raise ValueError("Order needs to be 'first', 'middle', 'end'.")
-        
-        kernel_size=(3,3,3)
-
-        self.out_channels = out_channels
-        self.kernel = nn.Parameter(
-            torch.zeros(out_channels, in_channels, *kernel_size)
+    def __init__(self, in_channels, out_channels):
+        super(GroupConv3d, self).__init__()
+        self.groups = 16
+        self.weight = nn.Parameter(
+            torch.zeros(out_channels * self.groups, in_channels, 3, 3, 3)
         )
-        self.init_parameters()
+        nn.init.xavier_uniform_(self.weight)
 
-        self.order = order
+        self.rearrange_weight_1 = Rearrange("o i g h w d -> o (i g) h w d")
 
-    def init_parameters(self):
-        nn.init.xavier_uniform_(self.kernel)
-   
-    def _rot_back_90(self, t):
-        t.rot90(k=1, dims=(4,2))
+        self.rearrange_x_1 = Rearrange("b i g h w d -> b (i g) h w d")
+        self.rearrange_x_2 = Rearrange("b (o g) h w d -> b o g h w d", g=self.groups)
 
-    def _rot_right_90(self, t):
-        t.rot90(k=1, dims=(3,2))
-
-    
-    
-        
-    
     def forward(self, x):
-        if self.order == 'first':
-            if len(x.shape) != 5:
-                raise ValueError(f"Tensor shape is not correct. Expected shape for 'first' is 5 dims, but got {len(x.shape)}")    
-            new_shape = list(x.shape)
-            
-            
-            new_shape.insert(1, 16)
+        transformed_weight = create_rotated_kernels(self.weight)
+        transformed_weight = self.rearrange_weight_1(transformed_weight)
 
-            # Add a dimension at position 1
-            x = x.unsqueeze(1)
-
-            # Expand to the new shape
-            x = x.expand(*new_shape)
-
-        elif self.order == 'middle':
-            if len(x.shape) != 6:
-                raise ValueError(f"Tensor shape is not correct. Expected shape for 'middle' is 5 dims, but got {len(x.shape)}")
-        elif self.order == 'end':
-            if len(x.shape) != 6:
-                raise ValueError(f"Tensor shape is not correct. Expected shape for 'end' is 5 dims, but got {len(x.shape)}")
-                      
-        new_x = torch.empty(x.shape[0], x.shape[1], self.out_channels, x.shape[3], x.shape[4], x.shape[5], device="cuda:0")
-        rotation = 0
-        for i in range(16):
-            channel = x[:, i, :, :, :, :]
-            
-            channel = F.conv3d(channel, self.kernel, stride=1, padding=1)
-            new_x[:,i,:,:,:,:] = channel
-
-            self._rot_right_90(self.kernel)
-            if rotation % 4 == 0:
-                self._rot_back_90(self.kernel)
+        x = self.rearrange_x_1(x)
         
-        x = new_x
-        if self.order == 'end':
-            return x.sum(dim=1)
-        
+        x = F.conv3d(x, transformed_weight, padding=1)
+
+        x = self.rearrange_x_2(x)
+
         return x
+
+
+class LiftingGroupConv3d(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(LiftingGroupConv3d, self).__init__()
+        self.groups = 16
+
+        self.weight = nn.Parameter(
+            torch.zeros(out_channels * self.groups, in_channels, 3,3,3)
+        )
+        nn.init.xavier_uniform_(self.weight)
+
+        self.rearrange_weight_1 = Rearrange("o i g h w d -> o (i g) h w d")
+
+
+        self.rep
+        self.rearrange_x_1 = Rearrange("b i h w d -> b (i g) h w d", g=self.groups)
         
-            
-if __name__ == '__main__':
-    # Testing code
-    layer = GroupConv3d(5,2, order='end')
+        self.rearrange_x_2 = Rearrange("b (o g) h w d -> b o g h w d", g=self.groups)
+
+
+    def forward(self, x):
+        transformed_weight = create_rotated_kernels(self.weight)
+        transformed_weight = self.rearrange_weight_1(transformed_weight)     
+        print(x.shape)
+
+        x = self.rearrange_x_1(x)
+        print(x.shape)
+        x = F.conv3d(x, transformed_weight, padding=1)
+        print(x.shape)
+        x = self.rearrange_x_2(x)
+
+        return x
+
+
+if __name__ == "__main__":
+
+
+    # print("got here")
+    # x = torch.randn(1,32,16,128,128,128).cuda()
+    # layer = GroupConv3d(32, 32).cuda()
+
+
+    # print(layer(x).shape)
+
+    x = torch.randn(1,3,128,128,128)
+    layer = LiftingGroupConv3d(3, 8)
+
+    print(layer(x).shape)
+
     
-    data = torch.randn(2,16,5,128,128,128)
     
-    data = layer(data)
-    print(data.shape)
-    
-    layer1 = GroupConv3d(3,1,order="first")
-    data = torch.randn(2,3,128,128,128)
-    data = layer1(data)
-    print(data.shape)
-            
-        
-        
-        
-        
-        
-        

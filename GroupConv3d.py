@@ -97,11 +97,7 @@ class GroupConv3d(nn.Module):
 
     def forward(self, x):
         transformed_weight = self.create_rotated_kernels(self.weight)
-        
-        original_shape = transformed_weight.shape
-        new_shape = (original_shape[0], self.groups, original_shape[1], original_shape[2], original_shape[3], original_shape[4], original_shape[5])
-        transformed_weight = transformed_weight.unsqueeze(1).expand(new_shape).reshape(new_shape)
-
+        transformed_weight = repeat(transformed_weight, "o i g h w d -> o g2 i g h w d", g2=self.groups)
         transformed_weight = self.rearrange_weight_1(transformed_weight)
         print(transformed_weight.shape)
         x = self.rearrange_x_1(x)
@@ -135,11 +131,7 @@ class LiftingGroupConv3d(nn.Module):
 
     def forward(self, x):
         transformed_weight = self.create_rotated_kernels(self.weight)
-        
-        original_shape = transformed_weight.shape
-        new_shape = (original_shape[0], self.groups, original_shape[1], original_shape[2], original_shape[3], original_shape[4], original_shape[5])
-        transformed_weight = transformed_weight.unsqueeze(1).expand(new_shape).reshape(new_shape)        
-        
+        transformed_weight = repeat(transformed_weight, "o i g h w d -> (o g2) i g h w d", g2=self.groups)
         transformed_weight = self.rearrange_weight_1(transformed_weight)  
         
         x = repeat(x, 'b c h w d -> b c g h w d', g=self.groups)
@@ -172,11 +164,7 @@ class GroupConvTranspose3d(nn.Module):
 
     def forward(self, x):
         transformed_weight = self.create_rotated_kernels(self.weight)
-        
-        original_shape = transformed_weight.shape
-        new_shape = (original_shape[0], self.groups, original_shape[1], original_shape[2], original_shape[3], original_shape[4], original_shape[5])
-        transformed_weight = transformed_weight.unsqueeze(1).expand(new_shape).reshape(new_shape)
-        
+        transformed_weight = repeat(transformed_weight, "i o g h w d -> (i g2) o g h w d", g2=self.groups)
         transformed_weight = self.rearrange_weight_1(transformed_weight)
 
         x = self.rearrange_x_1(x)

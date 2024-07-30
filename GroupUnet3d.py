@@ -5,7 +5,7 @@ from torch.nn import Conv3d, Dropout, MaxPool3d, ConvTranspose3d, Linear
 from torch import optim
 from torch.utils.data import DataLoader
 from dataset import SegDataset
-import lightning as L
+# import lightning as L
 from einops.layers.torch import Rearrange, Reduce
 
 import gconv.gnn as gnn
@@ -82,26 +82,26 @@ class Bottleneck(nn.Module):
         return x, H2
 
 
-class GroupUnet3d(L.LightningModule):
+class GroupUnet3d(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.down1 = Down(3, 8, lifting=True)
-        self.down2 = Down(8, 16)
-        self.down3 = Down(16, 32)
-        self.down4 = Down(32, 64)
+        self.down1 = Down(3, 16, lifting=True)
+        self.down2 = Down(16, 32)
+        self.down3 = Down(32, 64)
+        self.down4 = Down(64, 128)
 
-        self.bottleneck = Bottleneck(64, 128)
+        self.bottleneck = Bottleneck(128, 256)
 
-        self.up1 = Up(128, 64)
-        self.up2 = Up(64, 32)
-        self.up3 = Up(32, 16)
-        self.up4 = Up(16, 8)
+        self.up1 = Up(256, 128)
+        self.up2 = Up(128, 64)
+        self.up3 = Up(64, 32)
+        self.up4 = Up(32, 16)
 
        # self.pool = GMaxGroupPool()
         self.pool = Reduce("b c g h w d -> b c h w d", reduction="max")
 
-        self.out = Conv3d(8, 4, kernel_size=(1,1,1), stride=1)
+        self.out = Conv3d(16, 4, kernel_size=(1,1,1), stride=1)
 
     def forward(self, x):
         x, H1, S1 = self.down1(x, None)
@@ -155,8 +155,47 @@ class GroupUnet3d(L.LightningModule):
 
 
         
+
 if __name__ == "__main__":
-    layer = GroupUnet3d()
-    x = torch.randn(1, 3, 128,128,128)
-    x = layer(x)
-    print(x.shape)
+    train_dataset = SegDataset("./data/train/images", "./data/train/masks")
+    train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=4)
+
+    val_dataset = SegDataset("./data/val/images", "./data/val/masks")
+    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=4)
+    model = GroupUnet3d().cuda()
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=1e-4)
+    num_epochs = 12
+    for epoch in range(num_epochs):
+        model.train()
+        running_loss = 0.0
+        for i, (inputs, labels) in enumerate(train_loader):
+            optimizer.zero_grad()
+            inputs = inputs.cuda()
+            labels = labels.cuda()
+            outputs = model(inputs)
+            labels = torch.argmax(labels, dim=1)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            print(loss.item())
+            running_loss += loss.cpu().item()
+        
+        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(train_loader)}")
+        
+        # Validation step
+        model.eval()
+        val_loss = 0.0
+        correct = 0
+        total = 0
+        with torch.no_grad():
+            for inputs, labels in val_loader:
+                inputs = inputs.cuda()
+                labels = labels.cuda()
+                outputs = model(inputs)
+                labels = torch.argmax(labels, dim=1)
+                loss = criterion(outputs, labels)
+                val_loss += loss.item()
+                _, predicted = torch.max(outputs.data, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()

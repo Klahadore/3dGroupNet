@@ -9,7 +9,7 @@ def calculate_metrics(preds, targets):
     precision = torchmetrics.Precision(num_classes=4, average="macro", task="multiclass").cuda()
     recall = torchmetrics.Recall(num_classes=4, average="macro", task='multiclass').cuda()
     f1_score = torchmetrics.F1Score(num_classes=4, average="macro", task='multiclass').cuda()
-
+    print("f1_score")
     acc = accuracy(preds, targets)
     prec = precision(preds, targets)
     rec = recall(preds, targets)

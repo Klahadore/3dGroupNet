@@ -160,7 +160,3 @@ class Unet(L.LightningModule):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
         return optimizer
     
-if __name__ == "__main__":
-    x = torch.randn(1, 3, 128,128,128)
-    layer = Unet()
-    x = layer(x)

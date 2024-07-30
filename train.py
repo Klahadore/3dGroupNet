@@ -30,9 +30,9 @@ model = GroupUnet3d()
 # # )
 
 
-logger = TensorBoardLogger("tb_logs", name="GroupUnetSmall_one_batch")
+logger = TensorBoardLogger("tb_logs", name="New_GroupUnet_Small_OneBatch")
 
-trainer = Trainer(logger=logger, max_epochs=100, accelerator="gpu", overfit_batches=1, log_every_n_steps=1, precision="bf16")
+trainer = Trainer(logger=logger, max_epochs=1000, accelerator="gpu", overfit_batches=1, log_every_n_steps=1)
 trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
 # model = Unet()

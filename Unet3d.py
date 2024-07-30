@@ -109,10 +109,10 @@ class Unet(L.LightningModule):
         x, s3 = self.down3(x)
     #    print(x.shape)
         x, s4 = self.down4(x)
-     #   print(x.shape)
+        print(x.shape)
         
         x = self.bottleneck(x)
-    #    print(x.shape)
+        print(x.shape)
         
         x = self.up1(x, s4)
      #   print(x.shape)
@@ -159,3 +159,8 @@ class Unet(L.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
         return optimizer
+    
+if __name__ == "__main__":
+    x = torch.randn(1, 3, 128,128,128)
+    layer = Unet()
+    x = layer(x)

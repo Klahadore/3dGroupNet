@@ -72,7 +72,7 @@ class Up(torch.nn.Module):
         x_prev = x.shape
         x = torch.cat([skip_con, x], dim=1)
         assert x.shape[2] == x_prev[2]
-        
+
         x, H2 = self.C2(x, H1)
         x = F.relu(x)
         return x, H2
@@ -102,15 +102,15 @@ class GroupUnet3d(L.LightningModule):
         self.down2 = Down(32, 64)
         self.down3 = Down(64, 128)
         self.down4 = Down(128, 256)
-        self.down5 = Down(256, 512)  
-        self.bottleneck = Bottleneck(512, 1024)  
-        self.up1 = Up(1024, 512)  
-        self.up2 = Up(512, 256)
-        self.up3 = Up(256, 128)
-        self.up4 = Up(128, 64)
-        self.up5 = Up(64, 32)  
 
-       # self.pool = GMaxGroupPool()
+        self.bottleneck = Bottleneck(256, 512)
+
+        self.up1 = Up(512, 256)
+        self.up2 = Up(256, 128)
+        self.up3 = Up(128, 64)
+        self.up4 = Up(64, 32)
+
+        # self.pool = GMaxGroupPool()
         self.pool = Reduce("b c g h w d -> b c h w d", reduction="sum")
 
         self.out = Conv3d(32, 4, kernel_size=(1,1,1), stride=1)
@@ -120,14 +120,13 @@ class GroupUnet3d(L.LightningModule):
         x, H2, S2 = self.down2(x, H1)
         x, H3, S3 = self.down3(x, H2)
         x, H4, S4 = self.down4(x, H3)
-        x, H5, S5 = self.down5(x, H4)  
-        x, H6 = self.bottleneck(x, H5)
 
-        x, H7 = self.up1(x, H6, S5, H5)  
-        x, H8 = self.up2(x, H7, S4, H4)
-        x, H9 = self.up3(x, H8, S3, H3)
-        x, H10 = self.up4(x, H9, S2, H2)
-        x, _ = self.up5(x, H10, S1, H1)  
+        x, H5 = self.bottleneck(x, H4)
+
+        x, H6 = self.up1(x, H5, S4, H4)
+        x, H7 = self.up2(x, H6, S3, H3)
+        x, H8 = self.up3(x, H7, S2, H2)
+        x, _ = self.up4(x, H8, S1, H1)
 
         x = self.pool(x)
         x = self.out(x)

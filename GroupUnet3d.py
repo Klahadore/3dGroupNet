@@ -37,11 +37,11 @@ class Down(nn.Module):
         else:
             x, H1 = self.C1(x, H_previous)
         
-        x = F.relu(x)
+        x = F.leaky_relu(x)
         x = self.dropout1(x)
         
         x, H2 = self.C2(x, H1)
-        x = F.relu(x)
+        x = F.leaky_relu(x)
         x = self.dropout2(x)
         
         skip_con = x.clone()
@@ -64,7 +64,7 @@ class Up(torch.nn.Module):
 
     def forward(self, x, H_previous, skip_con, out_h):
         x, H1 = self.C1(x,  H_previous, out_H=out_h)
-        x = F.relu(x)
+        x = F.leaky_relu(x)
         
         x = self.rearrange1(x)
         x = self.upsample(x)
@@ -74,7 +74,7 @@ class Up(torch.nn.Module):
         assert x.shape[2] == x_prev[2]
 
         x, H2 = self.C2(x, H1)
-        x = F.relu(x)
+        x = F.leaky_relu(x)
         return x, H2
         
     
@@ -87,9 +87,9 @@ class Bottleneck(nn.Module):
 
     def forward(self, x, H_prev):
         x, H1 = self.C1(x, H_prev)
-        x = F.relu(x)
+        x = F.leaky_relu(x)
         x, H2 = self.C2(x, H1)
-        x = F.relu(x)
+        x = F.leaky_relu(x)
         
         return x, H2
 

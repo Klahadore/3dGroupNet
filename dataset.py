@@ -40,5 +40,5 @@ if __name__ == "__main__":
     dataloader = DataLoader(dataset, shuffle=True)
     
     for images, masks in dataloader:
-        print(images.shape, masks.shape)
+        print(images)
         

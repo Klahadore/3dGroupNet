@@ -10,7 +10,7 @@ from GroupUnet3d import GroupUnet3d
 from Unet3d import Unet
 
 
-
+# torch.set_float32_matmul_precision('medium')
 
 
 train_dataset = SegDataset("./data/train/images", "./data/train/masks")
@@ -23,16 +23,16 @@ val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=4)
 model = GroupUnet3d()
 
 
-# # checkpoint_callback = ModelCheckpoint(
-# #     dirpath="models",
-# #     filename="GroupUnetSmall_{epoch}",
-# #     every_n_epochs=5
-# # )
+checkpoint_callback = ModelCheckpoint(
+    dirpath="models",
+    filename="GroupUnetSmall_{epoch}",
+    every_n_epochs=5
+)
 
 
 logger = TensorBoardLogger("tb_logs", name="New_GroupUnet_Small_OneBatch")
 
-trainer = Trainer(logger=logger, max_epochs=1000, accelerator="gpu", overfit_batches=1, log_every_n_steps=1)
+trainer = Trainer(logger=logger, max_epochs=1000, accelerator="gpu", overfit_batches=1, callbacks=checkpoint_callback)
 trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
 # model = Unet()

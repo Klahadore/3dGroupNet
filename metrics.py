@@ -4,8 +4,7 @@ import torchmetrics
 def calculate_metrics(preds, targets):
     preds = torch.argmax(preds, dim=1)
     targets = torch.argmax(targets, dim=1)
-    print(preds.shape)
-    print(targets.shape)
+
     accuracy = torchmetrics.Accuracy(num_classes=4, task="multiclass").cuda()
     precision = torchmetrics.Precision(num_classes=4, average="macro", task="multiclass").cuda()
     recall = torchmetrics.Recall(num_classes=4, average="macro", task='multiclass').cuda()

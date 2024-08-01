@@ -23,11 +23,9 @@ class Down(nn.Module):
         else:
             self.C1 = GSeparableConvSE3(in_channels, out_channels, kernel_size=3, padding='same')
         
-        self.dropout1 = nn.Dropout3d(0.5)
         
         self.C2 = GSeparableConvSE3(out_channels, out_channels, kernel_size=3, padding='same')
         
-        self.dropout2 = nn.Dropout3d(0.5)
         
         self.pool = Reduce("b o g (h h2) (w w2) (d d2) -> b o g h w d", reduction='max', h2=2, w2=2, d2=2)
 
@@ -38,11 +36,9 @@ class Down(nn.Module):
             x, H1 = self.C1(x, H_previous)
         
         x = F.leaky_relu(x)
-        x = self.dropout1(x)
         
         x, H2 = self.C2(x, H1)
         x = F.leaky_relu(x)
-        x = self.dropout2(x)
         
         skip_con = x.clone()
         x = self.pool(x)
@@ -58,22 +54,22 @@ class Up(torch.nn.Module):
 
         self.C1 = GSeparableConvSE3(in_channels, out_channels, kernel_size=3, padding='same')
 
-        self.C2 = GSeparableConvSE3(2*out_channels, out_channels, kernel_size=3,padding='same')
+        self.C2 = GSeparableConvSE3(out_channels, out_channels, kernel_size=3,padding='same')
 
         # self.concat_x = Rearrange("b i g h w d -> b i g h w d")
 
     def forward(self, x, H_previous, skip_con, out_h):
-        x, H1 = self.C1(x,  H_previous, out_H=out_h)
+        x, H1 = self.C1(x,  H_previous)
         x = F.leaky_relu(x)
         
         x = self.rearrange1(x)
         x = self.upsample(x)
         x = self.rearrange2(x)
         x_prev = x.shape
-        x = torch.cat([skip_con, x], dim=1)
+        x = skip_con + x
         assert x.shape[2] == x_prev[2]
 
-        x, H2 = self.C2(x, H1)
+        x, H2 = self.C2(x, H1, out_H=out_h)
         x = F.leaky_relu(x)
         return x, H2
         
@@ -82,8 +78,8 @@ class Bottleneck(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
 
-        self.C1 = GSeparableConvSE3(in_channels, out_channels, 3, padding='same')
-        self.C2 = GSeparableConvSE3(out_channels, out_channels, 3, padding='same')
+        self.C1 = GSeparableConvSE3(in_channels, out_channels, kernel_size=3, padding='same')
+        self.C2 = GSeparableConvSE3(out_channels, out_channels, kernel_size=3, padding='same')
 
     def forward(self, x, H_prev):
         x, H1 = self.C1(x, H_prev)
@@ -98,22 +94,22 @@ class GroupUnet3d(L.LightningModule):
     def __init__(self):
         super().__init__()
 
-        self.down1 = Down(3, 32, lifting=True)
-        self.down2 = Down(32, 64)
-        self.down3 = Down(64, 128)
-        self.down4 = Down(128, 256)
+        self.down1 = Down(3, 16, lifting=True)
+        self.down2 = Down(16, 32)
+        self.down3 = Down(32, 64)
+        self.down4 = Down(64, 128)
 
-        self.bottleneck = Bottleneck(256, 512)
+        self.bottleneck = Bottleneck(128, 256)
 
-        self.up1 = Up(512, 256)
-        self.up2 = Up(256, 128)
-        self.up3 = Up(128, 64)
-        self.up4 = Up(64, 32)
+        self.up1 = Up(256, 128)
+        self.up2 = Up(128, 64)
+        self.up3 = Up(64, 32)
+        self.up4 = Up(32, 16)
 
         # self.pool = GMaxGroupPool()
-        self.pool = Reduce("b c g h w d -> b c h w d", reduction="sum")
+        self.pool = Reduce("b c g h w d -> b c h w d", reduction="mean")
 
-        self.out = Conv3d(32, 4, kernel_size=(1,1,1), stride=1)
+        self.out = Conv3d(16, 4, kernel_size=(1,1,1), stride=1)
 
     def forward(self, x):
         x, H1, S1 = self.down1(x, None)

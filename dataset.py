@@ -2,8 +2,7 @@ import os
 import torch
 from torch.utils.data import Dataset
 import numpy as np
-import matplotlib.pyplot as plt
-import random
+
 class SegDataset(Dataset):
     def __init__(self, image_dir, mask_dir):
         self.image_dir = image_dir
@@ -41,28 +40,5 @@ if __name__ == "__main__":
     dataloader = DataLoader(dataset, shuffle=True)
     
     for images, masks in dataloader:
-        test_img = images
-        test_mask=masks
-        n_slice=random.randint(0, test_mask.shape[2])
-        test_img = test_img[0]
-        test_mask = test_mask[0]
-
-        test_mask_argmax = np.argmax(test_mask, axis=0)
-
-        plt.figure(figsize=(12, 8))
-
-        plt.subplot(221)
-        plt.imshow(test_img[0, :, :, n_slice], cmap='gray')
-        plt.title('Image flair')
-        plt.subplot(222)
-        plt.imshow(test_img[1, :, :, n_slice], cmap='gray')
-        plt.title('Image t1ce')
-        plt.subplot(223)
-        plt.imshow(test_img[2, :, :, n_slice], cmap='gray')
-        plt.title('Image t2')
-        plt.subplot(224)
-        plt.imshow(test_mask_argmax[:, :, n_slice], cmap='tab10')  # Use a colormap for different categories
-        plt.title('Mask')
-
-        plt.tight_layout()  # Adjust subplots to fit into figure area.
-        plt.show()
+        print(images)
+        

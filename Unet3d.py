@@ -109,8 +109,10 @@ class Unet(L.LightningModule):
         x, s3 = self.down3(x)
     #    print(x.shape)
         x, s4 = self.down4(x)
+        print(x.shape)
         
         x = self.bottleneck(x)
+        print(x.shape)
         
         x = self.up1(x, s4)
      #   print(x.shape)
@@ -151,10 +153,10 @@ class Unet(L.LightningModule):
         self.log('train_precision', metrics['precision'], on_epoch=True, prog_bar=True)
         self.log('train_recall', metrics['recall'], on_epoch=True, prog_bar=True)
         self.log('train_f1_score', metrics['f1_score'], on_epoch=True, prog_bar=True)
-        print(metrics['f1_score'])
+
         return loss
     
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
         return optimizer
     

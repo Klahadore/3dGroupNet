@@ -29,9 +29,9 @@ checkpoint_callback = ModelCheckpoint(
 )
 
 
-logger = TensorBoardLogger("tb_logs", name="New_GroupUnet_Small_OneBatch")
+logger = TensorBoardLogger("tb_logs", name="working_group_unet")
 
-trainer = Trainer(logger=logger, max_epochs=10000, accelerator="gpu", overfit_batches=1, check_val_every_n_epoch=100)
+trainer = Trainer(logger=logger, max_epochs=100, accelerator="gpu", check_val_every_n_epoch=5)
 trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
 # model = Unet()
@@ -46,5 +46,3 @@ trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
 # trainer = Trainer(logger=logger, max_epochs=1000, accelerator="gpu", overfit_batches=1)
 # trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
-
-
